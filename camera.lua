@@ -44,9 +44,9 @@ function Camera.new( params )
 
         self.setPosition( self.x + x, self.y + y )
 
-		if self.zoom < self.getMinZoom() then
+		if self.getMinZoom() and self.zoom < self.getMinZoom() then
 			self.zoom = self.getMinZoom()
-		elseif self.zoom > self.getMaxZoom() then
+		elseif self.getMaxZoom() and self.zoom > self.getMaxZoom() then
 			self.zoom = self.getMaxZoom()
 		end
 
@@ -59,19 +59,20 @@ function Camera.new( params )
 
 
     function self.focusOn( x, y, zoom, rotation )
-		
+
 		self._focus.x = self.isSmoothingDisabled() and x or self._lerper.lerp( self._focus.x, x ) --, self.smoothing )
         self._focus.y = self.isSmoothingDisabled() and y or self._lerper.lerp( self._focus.y, y ) --, self.smoothing )
 
 		if zoom then
-			if zoom > self.getMaxZoom() then
+			if self.getMaxZoom() and zoom > self.getMaxZoom() then
 				zoom = self.getMaxZoom()
-			elseif zoom < self.getMinZoom() then
+			elseif self.getMinZoom() and zoom < self.getMinZoom() then
 				zoom = self.getMinZoom()
 			end
 		end
 
 		self.zoom = self.isSmoothingDisabled() and zoom or self._lerper.lerp( self.zoom, ( zoom or 1 ), self.smoothing * 1 )
+
 		self.rotation = self.isRotationLocked() and self.rotation or ( self.isSmoothingDisabled() and rotation or self._lerper.lerp( self.rotation, ( rotation or 1 ) ) )
 
     end
@@ -80,12 +81,20 @@ function Camera.new( params )
 		return self.zoom
 	end
 
+	function self.setMaxZoom( zoom )
+		self.maxZoom = zoom
+	end
+
 	function self.getMaxZoom()
-		return 1.5
+		return self.maxZoom
 	end
 
 	function self.getMinZoom()
-		return 0.25
+		return self.minZoom
+	end
+
+	function self.setMinZoom( zoom )
+		self.minZoom = zoom
 	end
 
 	function self.lockRotation()
@@ -130,10 +139,40 @@ function Camera.new( params )
     end
 
 	function self.jumpTo( x, y, zoom, rotation )
+
 		self.zoom = ( zoom or self.zoom or 1 )
 		self.rotation = ( rotation or self.rotation or 0 )
 		self._focus.x = ( x or self.x or 0 )
 		self._focus.y = ( y or self.y or 0 )
+
+	end
+
+	function self.setBounds( xMin, yMin, xMax, yMax )
+		self._bounds = { xMin = xMin, yMin = yMin, xMax = xMax, yMax = yMax }
+	end
+
+	function self.getBounds()
+		return self._bounds or { xMin = 0, yMin = 0, xMax = self.view.contentWidth, yMax = self.view.contentHeight }
+	end
+
+	function self.clampPosition()
+
+		if self.x > self.getBounds().xMin then
+			self.x = self.getBounds().xMin
+			self.view.x = self.x
+		elseif self.x < -( self.getBounds().xMax - display.contentWidth ) then
+			self.x = -( self.getBounds().xMax - display.contentWidth )
+		end
+
+		if self.y > self.getBounds().yMin then
+			self.y = self.getBounds().yMin
+			self.view.y = self.y
+		elseif self.y < -( self.getBounds().yMax - display.contentHeight ) then
+			self.y = -( self.getBounds().yMax - display.contentHeight )
+		end
+
+		self.view.x, self.view.y = self.x, self.y
+
 	end
 
 	--self.disableSmoothing()
